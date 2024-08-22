@@ -275,9 +275,6 @@ public class BetterContainers {
 					ItemStack stack = getStackFromInvetory(lower, index);
 					buttons[index % 9][index / 9] = isButtonStack(index, stack);
 
-					if (ultrasequencer && stack.getItem() == Items.dye) {
-						buttons[index % 9][index / 9] = false;
-					}
 
 					if (superpairs && index > 9 && index < size - 9) {
 						buttons[index % 9][index / 9] = false;

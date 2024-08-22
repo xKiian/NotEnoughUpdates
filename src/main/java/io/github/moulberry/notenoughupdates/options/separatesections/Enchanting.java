@@ -53,6 +53,27 @@ public class Enchanting {
 	@ConfigAccordionId(id = 1)
 	public boolean enableHexGUI = true;
 
+	@Expose
+	@ConfigOption(
+		name = "Auto Solve",
+		desc = "Automate the enchantment table"
+	)
+	@ConfigEditorBoolean
+	@ConfigAccordionId(id = 0)
+	public boolean autoSolve = true;
+
+	@Expose
+	@ConfigOption(
+		name = "Solve Delay",
+		desc = "Change the Solve Delay in milliseconds"
+	)
+	@ConfigEditorSlider(
+		minValue = 200f,
+		maxValue = 1500f,
+		minStep = 10f
+	)
+	public float solveDelay = 400f;
+
 	/*@Expose
 	@ConfigOption(
 		name = "Incompatible Enchants",

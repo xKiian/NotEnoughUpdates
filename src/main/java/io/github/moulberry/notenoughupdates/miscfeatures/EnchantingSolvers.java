@@ -30,16 +30,20 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.ContainerChest;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.StringUtils;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import org.lwjgl.input.Keyboard;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,6 +53,7 @@ import java.util.Map;
 
 @NEUAutoSubscribe
 public class EnchantingSolvers {
+
 	public static SolverType currentSolver = SolverType.NONE;
 
 	public enum SolverType {
@@ -91,6 +96,8 @@ public class EnchantingSolvers {
 	private static final HashSet<Integer> possibleMatches = new HashSet<>();
 	private static final HashSet<Integer> powerupMatches = new HashSet<>();
 
+	private static final Clock delayClock = new Clock();
+
 	@SubscribeEvent
 	public void onGuiOpen(GuiOpenEvent event) {
 		chronomatronOrder.clear();
@@ -110,6 +117,17 @@ public class EnchantingSolvers {
 				currentSolver = SolverType.SUPERPAIRS;
 			}
 		}
+	}
+
+	public static enum ClickType {
+		LEFT,
+		RIGHT
+	}
+
+	public static enum ClickMode {
+		PICKUP,
+		QUICK_MOVE,
+		SWAP
 	}
 
 	public static ItemStack overrideStack(IInventory inventory, int slotIndex, ItemStack stack) {
@@ -152,6 +170,12 @@ public class EnchantingSolvers {
 
 								if (chronomatronCurrent.equals(displayName)) {
 									if (!lastSame || currentTime - millisLastClick > 300) {
+										boolean skibidi = false;
+										if (!delayClock.isScheduled() || delayClock.passed()) {
+											skibidi = true;
+											delayClock.schedule((long) (NotEnoughUpdates.INSTANCE.config.enchantingSolvers.solveDelay + (float) Math.random() * 350f));
+										}
+
 										ItemStack retStack = new ItemStack(
 											Item.getItemFromBlock(Blocks.stained_hardened_clay),
 											1,
@@ -159,6 +183,29 @@ public class EnchantingSolvers {
 										);
 										retStack.setTagCompound(enchTag);
 										retStack.setStackDisplayName(stack.getDisplayName());
+
+										int slotToClick = -1;
+
+										for (Slot slot : Minecraft.getMinecraft().thePlayer.openContainer.inventorySlots) {
+											if (slot.getHasStack()) {
+												String itemName = slot.getStack().getDisplayName();
+												if (itemName.contains(displayName)) {
+													slotToClick = slot.slotNumber;
+												}
+											}
+										}
+
+										if (NotEnoughUpdates.INSTANCE.config.enchantingSolvers.autoSolve && (!delayClock.isScheduled() || delayClock.passed() || skibidi)) {
+											Minecraft.getMinecraft().playerController.windowClick(
+												Minecraft.getMinecraft().thePlayer.openContainer.windowId,
+												slotToClick,
+												ClickType.LEFT.ordinal(),
+												ClickMode.PICKUP.ordinal(),
+												Minecraft.getMinecraft().thePlayer
+											);
+											chronomatronReplayIndex++;
+										}
+
 										return retStack;
 									} else {
 										ItemStack retStack = new ItemStack(
@@ -200,12 +247,31 @@ public class EnchantingSolvers {
 					boolean yepClock = timerStack.getItem() == Items.clock;
 					if (stack.getItem() == Item.getItemFromBlock(Blocks.stained_glass_pane) && stack.getItemDamage() != 15) {
 						if (yepClock) {
+
+							boolean skibidi = false;
+							if (!delayClock.isScheduled() || delayClock.passed()) {
+								skibidi = true;
+								delayClock.schedule((long) (NotEnoughUpdates.INSTANCE.config.enchantingSolvers.solveDelay + (float) Math.random() * 350f));
+							}
+
+							if (NotEnoughUpdates.INSTANCE.config.enchantingSolvers.autoSolve && (!delayClock.isScheduled() || delayClock.passed() || skibidi)) {
+
+								Minecraft.getMinecraft().playerController.windowClick(
+									Minecraft.getMinecraft().thePlayer.openContainer.windowId,
+									ultraSequencerOrder.get(ultrasequencerReplayIndex).containerIndex,
+									ClickType.LEFT.ordinal(),
+									ClickMode.PICKUP.ordinal(),
+									Minecraft.getMinecraft().thePlayer
+								);
+								ultrasequencerReplayIndex++;
+							}
 							for (int solveIndex : ultraSequencerOrder.keySet()) {
 								UltrasequencerItem item = ultraSequencerOrder.get(solveIndex);
 								if (item.containerIndex == slotIndex) {
 									ItemStack newStack = item.stack;
 									if (solveIndex == ultrasequencerReplayIndex) {
 										newStack.setTagCompound(enchTag);
+
 									} else {
 										newStack.setTagCompound(null);
 									}
@@ -214,6 +280,9 @@ public class EnchantingSolvers {
 							}
 							ItemStack retStack = new ItemStack(Item.getItemFromBlock(Blocks.stained_glass_pane), 1, 15);
 							retStack.setStackDisplayName(stack.getDisplayName());
+
+
+
 							return retStack;
 						}
 					}
@@ -435,6 +504,7 @@ public class EnchantingSolvers {
 				if (timerStack.getItem() == Item.getItemFromBlock(Blocks.glowstone) ||
 					(yepClock && (!addToChronomatron || chronomatronOrder.size() < lastChronomatronSize + 1))) {
 					if (chronomatronStartSeq) {
+						delayClock.schedule((long) (400f + (float) Math.random() * 350f));
 						chronomatronStartSeq = false;
 						addToChronomatron = false;
 						lastChronomatronSize = chronomatronOrder.size();
@@ -566,7 +636,7 @@ public class EnchantingSolvers {
 			if (internal == null && event.toolTip.size() > 0 && !event.toolTip
 				.get(0)
 				.trim()
-				.replaceAll("\\(#.+\\)$", "")
+				.replaceAll("\\(#.+\\)$", "Kian :)")
 				.trim()
 				.contains(" ")) {
 				event.toolTip.clear();
