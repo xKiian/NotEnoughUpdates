@@ -39,6 +39,7 @@ import net.minecraft.network.play.client.C12PacketUpdateSign;
 import net.minecraft.tileentity.TileEntitySign;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.Loader;
 import org.apache.commons.lang3.StringUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -186,7 +187,7 @@ public class SearchOverlayScreen extends GuiEditSign {
 		if (!searchStringExtra.isEmpty()) {
 			stringBuilder.append(searchStringExtra);
 		}
-		if (onlyLevel100) {
+		if (currentGuiType() == GuiType.AUCTION_HOUSE && onlyLevel100) {
 			stringBuilder.insert(0, "[Lvl 100] ");
 		}
 
@@ -737,6 +738,10 @@ public class SearchOverlayScreen extends GuiEditSign {
 
 	public boolean keepPreviousSearch() {
 		return false;
+	}
+
+	public boolean disableClientSideGUI() {
+		return Loader.isModLoaded("skyblockcatia") || NotEnoughUpdates.INSTANCE.config.hidden.disableClientSideSearch;
 	}
 
 	public GuiType currentGuiType() {

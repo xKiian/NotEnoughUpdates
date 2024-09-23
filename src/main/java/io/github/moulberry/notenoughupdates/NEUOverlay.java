@@ -229,6 +229,7 @@ public class NEUOverlay extends Gui {
 		this.manager = manager;
 		textField.setFocused(true);
 		textField.setCanLoseFocus(false);
+		textField.setMaxStringLength(50);
 
 		guiGroup = createGuiGroup();
 	}
@@ -1414,6 +1415,7 @@ public class NEUOverlay extends Gui {
 				"DRILL",
 				"GAUNTLET",
 				"LONGSWORD",
+				"DUNGEON LONGSWORD",
 				"DEPLOYABLE"
 			) >= 0;
 		} else if (getSortMode() == SORT_MODE_ARMOR) {

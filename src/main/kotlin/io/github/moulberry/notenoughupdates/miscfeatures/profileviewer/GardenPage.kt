@@ -44,6 +44,7 @@ import net.minecraft.init.Blocks
 import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance) {
     private val manager get() = NotEnoughUpdates.INSTANCE.manager
@@ -54,7 +55,7 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
     private var currentProfile: SkyblockProfiles.SkyblockProfile? = null
     private var gardenData: GardenData? = null
     private var eliteData: EliteWeightJson? = null
-    private var currentlyFetching = false
+    private var currentlyFetching = AtomicBoolean(false)
     private lateinit var repoData: GardenRepoJson
     private var apiData: APIDataJson? = null
 
@@ -89,7 +90,7 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
         this.mouseX = mouseX
         this.mouseY = mouseY
 
-        if (currentlyFetching) {
+        if (currentlyFetching.get()) {
             Utils.drawStringCentered("§eLoading Data", guiLeft + 220, guiTop + 101, true, 0)
             return
         }
@@ -133,15 +134,13 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
     }
 
     private fun getData() {
-        currentlyFetching = true
+        currentlyFetching.set(true)
         val profileId = selectedProfile?.outerProfileJson?.get("profile_id")?.asString?.replace("-", "")
         Coroutines.launchCoroutine {
             gardenData = loadGardenData(profileId)
             getVisitorData()
-            currentlyFetching = false
-        }
-        Coroutines.launchCoroutine {
             eliteData = loadFarmingWeight(GuiProfileViewer.getProfile()?.uuid, profileId)
+            currentlyFetching.set(false)
         }
     }
 
@@ -153,6 +152,8 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
     }
 
     private fun getVisitorData() {
+        visitorRarityToVisits.clear()
+        visitorRarityToCompleted.clear()
         for ((visitor, amount) in gardenData?.commissionData?.visits ?: return) {
             val rarity = repoData.visitors[visitor]
             if (rarity == null) {
@@ -257,6 +258,7 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
 
         Utils.renderShadowedString("§eCrop Upgrades", xPos + 70, yPos + 5, 105)
 
+        var averageUpgrade = 0
         for ((index, crop) in CropType.values().withIndex()) {
             if (index == 5) {
                 yPos = startHeight
@@ -265,6 +267,7 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
             yPos += 14
 
             val upgradeLevel = gardenData?.cropUpgradeLevels?.get(crop) ?: 0
+            averageUpgrade += upgradeLevel
 
             val itemStack = manager.createItem(crop.itemId)
             Utils.drawItemStack(itemStack, xPos + 2, yPos)
@@ -299,6 +302,11 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
                 instance.tooltipToDisplay = tooltip
             }
         }
+        val x = guiLeft + 70 + 26 - 42
+        val y = startHeight + 5
+        if (mouseX in x..(x + 80) && mouseY in y..(y + 13)) {
+            instance.tooltipToDisplay = listOf("§eAverage Upgrade ${averageUpgrade/10}")
+        }
     }
 
     private fun renderCropMilestones() {
@@ -308,6 +316,7 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
 
         Utils.renderShadowedString("§eCrop Milestones", xPos + 70, yPos + 5, 105)
 
+        var averageMilestone = 0
         for ((index, crop) in CropType.values().withIndex()) {
             if (index == 5) {
                 yPos = startHeight
@@ -375,7 +384,14 @@ class GardenPage(pvInstance: GuiProfileViewer) : GuiProfileViewerPage(pvInstance
                 50,
                 tooltip
             )
+            averageMilestone += collectionLevel
         }
+        val x = guiLeft + 70 + 26 - 42
+        val y = startHeight + 5
+        if (mouseX in x..(x + 80) && mouseY in y..(y + 13)) {
+            instance.tooltipToDisplay = listOf("§eAverage Milestone ${averageMilestone/10}")
+        }
+
     }
 
     private fun renderVisitorStats() {
