@@ -1,3 +1,3 @@
-this fork of NEU contains added an enchanting tale solver
+this fork of NEU added an enchanting table solver
 
 use at own risk
